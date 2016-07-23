@@ -9,8 +9,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"code.google.com/p/go.crypto/curve25519"
 	"github.com/tendermint/ed25519"
+	"golang.org/x/crypto/curve25519"
 )
 
 func TestCurve25519Conversion(t *testing.T) {
