@@ -35,12 +35,14 @@ func GenerateKey(rand io.Reader) (publicKey *[PublicKeySize]byte, privateKey *[P
 	return
 }
 
-// MakePublicKey makes a publicKey from the first half of privateKey.
+// MakePublicKey makes a publicKey from the first 32 bytes
+// of privateKey, and at the end mutates privateKey setting
+// its first 32 bytes to those of the generated publicKey.
 func MakePublicKey(privateKey *[PrivateKeySize]byte) (publicKey *[PublicKeySize]byte) {
-	publicKey = new([32]byte)
+	publicKey = new([PublicKeySize]byte)
 
 	h := sha512.New()
-	h.Write(privateKey[:32])
+	h.Write(privateKey[:PublicKeySize])
 	digest := h.Sum(nil)
 
 	digest[0] &= 248
@@ -48,12 +50,12 @@ func MakePublicKey(privateKey *[PrivateKeySize]byte) (publicKey *[PublicKeySize]
 	digest[31] |= 64
 
 	var A edwards25519.ExtendedGroupElement
-	var hBytes [32]byte
+	var hBytes [PublicKeySize]byte
 	copy(hBytes[:], digest)
 	edwards25519.GeScalarMultBase(&A, &hBytes)
 	A.ToBytes(publicKey)
 
-	copy(privateKey[32:], publicKey[:])
+	copy(privateKey[PublicKeySize:], publicKey[:])
 	return
 }
 
