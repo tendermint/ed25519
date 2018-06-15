@@ -10,8 +10,8 @@ package ed25519
 // from SUPERCOP.
 
 import (
+	"bytes"
 	"crypto/sha512"
-	"crypto/subtle"
 	"io"
 
 	"github.com/tendermint/ed25519/edwards25519"
@@ -110,6 +110,16 @@ func Verify(publicKey *[PublicKeySize]byte, message []byte, sig *[SignatureSize]
 	if !A.FromBytes(publicKey) {
 		return false
 	}
+	return VerifyUncompressedKey(publicKey, &A, message, sig)
+}
+
+// VerifyUncompressedKey returns true iff sig is a valid signature of message by publicKey.
+// This takes in the uncompressed form of the public key (A) to avoid computing that internally.
+func VerifyUncompressedKey(publicKey *[PublicKeySize]byte, A *edwards25519.ExtendedGroupElement, message []byte, sig *[SignatureSize]byte) bool {
+	if sig[63]&224 != 0 {
+		return false
+	}
+
 	edwards25519.FeNeg(&A.X, &A.X)
 	edwards25519.FeNeg(&A.T, &A.T)
 
@@ -124,11 +134,18 @@ func Verify(publicKey *[PublicKeySize]byte, message []byte, sig *[SignatureSize]
 	edwards25519.ScReduce(&hReduced, &digest)
 
 	var R edwards25519.ProjectiveGroupElement
-	var b [32]byte
-	copy(b[:], sig[32:])
-	edwards25519.GeDoubleScalarMultVartime(&R, &hReduced, &A, &b)
+	var s [32]byte
+	copy(s[:], sig[32:])
+
+	// https://tools.ietf.org/html/rfc8032#section-5.1.7 requires that s be in
+	// the range [0, order) in order to prevent signature malleability.
+	if !edwards25519.ScMinimal(&s) {
+		return false
+	}
+
+	edwards25519.GeDoubleScalarMultVartime(&R, &hReduced, A, &s)
 
 	var checkR [32]byte
 	R.ToBytes(&checkR)
-	return subtle.ConstantTimeCompare(sig[:32], checkR[:]) == 1
+	return bytes.Equal(sig[:32], checkR[:])
 }
