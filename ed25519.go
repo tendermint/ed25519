@@ -110,6 +110,16 @@ func Verify(publicKey *[PublicKeySize]byte, message []byte, sig *[SignatureSize]
 	if !A.FromBytes(publicKey) {
 		return false
 	}
+	return VerifyUncompressedKey(publicKey, &A, message, sig)
+}
+
+// VerifyUncompressedKey returns true iff sig is a valid signature of message by publicKey.
+// This takes in the uncompressed form of the public key (A) to avoid computing that internally.
+func VerifyUncompressedKey(publicKey *[PublicKeySize]byte, A *edwards25519.ExtendedGroupElement, message []byte, sig *[SignatureSize]byte) bool {
+	if sig[63]&224 != 0 {
+		return false
+	}
+
 	edwards25519.FeNeg(&A.X, &A.X)
 	edwards25519.FeNeg(&A.T, &A.T)
 
@@ -133,7 +143,7 @@ func Verify(publicKey *[PublicKeySize]byte, message []byte, sig *[SignatureSize]
 		return false
 	}
 
-	edwards25519.GeDoubleScalarMultVartime(&R, &hReduced, &A, &s)
+	edwards25519.GeDoubleScalarMultVartime(&R, &hReduced, A, &s)
 
 	var checkR [32]byte
 	R.ToBytes(&checkR)
