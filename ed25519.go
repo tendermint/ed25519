@@ -10,8 +10,8 @@ package ed25519
 // from SUPERCOP.
 
 import (
+	"bytes"
 	"crypto/sha512"
-	"crypto/subtle"
 	"io"
 
 	"github.com/tendermint/ed25519/edwards25519"
@@ -124,11 +124,18 @@ func Verify(publicKey *[PublicKeySize]byte, message []byte, sig *[SignatureSize]
 	edwards25519.ScReduce(&hReduced, &digest)
 
 	var R edwards25519.ProjectiveGroupElement
-	var b [32]byte
-	copy(b[:], sig[32:])
-	edwards25519.GeDoubleScalarMultVartime(&R, &hReduced, &A, &b)
+	var s [32]byte
+	copy(s[:], sig[32:])
+
+	// https://tools.ietf.org/html/rfc8032#section-5.1.7 requires that s be in
+	// the range [0, order) in order to prevent signature malleability.
+	if !edwards25519.ScMinimal(&s) {
+		return false
+	}
+
+	edwards25519.GeDoubleScalarMultVartime(&R, &hReduced, &A, &s)
 
 	var checkR [32]byte
 	R.ToBytes(&checkR)
-	return subtle.ConstantTimeCompare(sig[:32], checkR[:]) == 1
+	return bytes.Equal(sig[:32], checkR[:])
 }
