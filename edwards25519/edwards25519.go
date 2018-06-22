@@ -19,12 +19,34 @@ type FieldElement [10]int32
 var zero FieldElement
 
 func FeZero(fe *FieldElement) {
-	copy(fe[:], zero[:])
+	// Unrolled version of:
+	// copy(fe[:], zero[:])
+	fe[0] = 0
+	fe[1] = 0
+	fe[2] = 0
+	fe[3] = 0
+	fe[4] = 0
+	fe[5] = 0
+	fe[6] = 0
+	fe[7] = 0
+	fe[8] = 0
+	fe[9] = 0
 }
 
 func FeOne(fe *FieldElement) {
-	FeZero(fe)
+	// Unrolled version of
+	// FeZero(fe)
+	// fe[0] = 1
 	fe[0] = 1
+	fe[1] = 0
+	fe[2] = 0
+	fe[3] = 0
+	fe[4] = 0
+	fe[5] = 0
+	fe[6] = 0
+	fe[7] = 0
+	fe[8] = 0
+	fe[9] = 0
 }
 
 func FeAdd(dst, a, b *FieldElement) {
